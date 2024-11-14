@@ -47,11 +47,13 @@
 
 .complaint-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
   gap: 20px;
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .complaint-card {
@@ -70,10 +72,17 @@
 
 .complaint-card h2 {
   color: #333;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
+  font-weight: 700;
   margin-bottom: 10px;
   border-bottom: 2px solid #61dafb;
   padding-bottom: 10px;
+}
+
+.complaint-card h3 {
+  color: #444;
+  font-size: 1.4rem;
+  margin-top: 10px;
 }
 
 .complaint-card p {
@@ -132,9 +141,123 @@
 @media (max-width: 768px) {
   .complaint-container {
     grid-template-columns: 1fr;
+    padding: 10px;
   }
-  
+
+  .search-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .detail-page {
+    padding: 10px;
+  }
+
+  .complaint-card h2 {
+    font-size: 1.5rem;
+  }
+}
+
+.complaint-title {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.complaint-title:hover {
+  opacity: 0.8;
+}
+
+.detail-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.back-button {
+  background: #61dafb;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.back-button:hover {
+  background: #4fa8d1;
+}
+
+.detail-container {
+  background: white;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.detail-section {
+  margin: 30px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.detail-section h3 {
+  color: #333;
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .App {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+
   .complaint-card {
-    margin: 10px;
+    background: #2d2d2d;
+    color: #ffffff;
+  }
+
+  .detail-section {
+    background: #333333;
+  }
+}
+
+.status-indicator {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.status-completed {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+@media print {
+  .complaint-container {
+    display: block;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .complaint-card {
+    break-inside: avoid;
+    margin-bottom: 20px;
+  }
+
+  .no-print {
+    display: none;
   }
 }
