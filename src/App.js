@@ -6,9 +6,10 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } 
 function App() {
     const [complaints, setComplaints] = useState([]);
     const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load and parse the CSV file
+        console.log("Attempting to load CSV file...");
         Papa.parse(`${process.env.PUBLIC_URL}/LawsistViewMetadata.csv`, {
             download: true,
             header: false,
@@ -16,46 +17,75 @@ function App() {
                 try {
                     const data = results.data;
                     const formattedComplaints = [];
+                    
+                    // Number of columns per complaint
+                    const columnsPerComplaint = 2;
+                    // Total number of complaints
+                    const numberOfComplaints = 5;
 
-                    // Process each row (each row represents a complaint)
-                    for (let i = 0; i < data.length; i += 2) {  // Increment by 2 since data alternates between labels and values
-                        if (data[i] && data[i][0]) {  // Check if row exists and has data
-                            formattedComplaints.push({
-                                title: data[i][0] || "No Title",
-                                description: data[i][1] || "No Description",
-                                links: {
-                                    folder: data[i + 1][3] || "",
-                                    complaint: data[i + 1][4] || "",
-                                    exhibit: data[i + 1][5] || "",
-                                    trackChanges: data[i + 1][6] || "",
-                                    sourceData: data[i + 1][7] || ""
-                                },
-                                civilyzer: data[i + 1][8] || "N/A",
-                                requestDate: data[i + 1][9] || "N/A",
-                                nextRequestDate: data[i + 1][10] || "N/A",
-                                whoCalled: data[i + 1][11] || "N/A",
-                                spokeTo: data[i + 1][12] || "N/A",
-                                when: data[i + 1][13] || "N/A",
-                                result: data[i + 1][14] || "N/A"
-                            });
-                        }
+                    // Process each complaint
+                    for (let complaintIndex = 0; complaintIndex < numberOfComplaints; complaintIndex++) {
+                        const baseColumn = complaintIndex * columnsPerComplaint;
+                        
+                        formattedComplaints.push({
+                            title: data[1][baseColumn] || "No Title",
+                            description: data[2][baseColumn] || "No Description",
+                            links: {
+                                folder: data[3][baseColumn + 1] || "",
+                                complaint: data[4][baseColumn + 1] || "",
+                                exhibit: data[5][baseColumn + 1] || "",
+                                trackChanges: data[6][baseColumn + 1] || "",
+                                sourceData: data[7][baseColumn + 1] || ""
+                            },
+                            civilyzer: data[8][baseColumn + 1] || "N/A",
+                            requestDate: data[9][baseColumn + 1] || "N/A",
+                            nextRequestDate: data[10][baseColumn + 1] || "N/A",
+                            whoCalled: data[11][baseColumn + 1] || "N/A",
+                            spokeTo: data[12][baseColumn + 1] || "N/A",
+                            when: data[13][baseColumn + 1] || "N/A",
+                            result: data[14][baseColumn + 1] || "N/A"
+                        });
                     }
 
+                    console.log("Formatted Complaints:", formattedComplaints);
                     setComplaints(formattedComplaints);
+                    setLoading(false);
                 } catch (err) {
                     console.error("Error parsing CSV:", err);
-                    setError("Failed to load complaints data.");
+                    setError(`Failed to parse CSV: ${err.message}`);
+                    setLoading(false);
                 }
             },
-            error: (err) => {
-                console.error("Error loading CSV:", err);
-                setError("Failed to load CSV file.");
+            error: (error) => {
+                console.error("Papa Parse Error:", error);
+                setError(`Failed to load CSV: ${error.message}`);
+                setLoading(false);
             }
         });
     }, []);
 
+    if (loading) {
+        return (
+            <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading complaints...</p>
+            </div>
+        );
+    }
+
     if (error) {
-        return <div className="App"><h1>{error}</h1></div>;
+        return (
+            <div className="error-container">
+                <h2>Error Loading Data</h2>
+                <p>{error}</p>
+                <button 
+                    onClick={() => window.location.reload()} 
+                    className="retry-button"
+                >
+                    Retry
+                </button>
+            </div>
+        );
     }
 
     return (
