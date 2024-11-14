@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
 
 function App() {
     const [complaints, setComplaints] = useState([]);
@@ -100,85 +100,127 @@ function App() {
 
 function ComplaintGrid({ complaints }) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterDate, setFilterDate] = useState('');
-    const [sortBy, setSortBy] = useState('date'); // 'date', 'title', etc.
+    const [sortBy, setSortBy] = useState('date');
+    const [viewMode, setViewMode] = useState('grid');
 
     const filteredComplaints = complaints.filter(complaint => 
         complaint.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         complaint.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const sortedComplaints = [...filteredComplaints].sort((a, b) => {
-        switch(sortBy) {
-            case 'date':
-                return new Date(b.requestDate) - new Date(a.requestDate);
-            case 'title':
-                return a.title.localeCompare(b.title);
-            default:
-                return 0;
-        }
-    });
-
     return (
         <div className="App">
-            <div className="search-container">
-                <input
-                    type="text"
-                    placeholder="Search complaints..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="search-input"
-                />
-                <input
-                    type="date"
-                    value={filterDate}
-                    onChange={(e) => setFilterDate(e.target.value)}
-                    className="date-filter"
-                />
-            </div>
-            <div className="sort-container">
-                <select 
-                    value={sortBy} 
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="sort-select"
+            <header className="app-header">
+                <img src={`${process.env.PUBLIC_URL}/Logo.png`} alt="Logo" className="logo" />
+                <h1>Lawsist View</h1>
+            </header>
+
+            <div className="mobile-quick-actions">
+                <button 
+                    className={`view-toggle ${viewMode === 'grid' ? 'active' : ''}`}
+                    onClick={() => setViewMode('grid')}
                 >
-                    <option value="date">Sort by Date</option>
-                    <option value="title">Sort by Title</option>
-                </select>
+                    Grid View
+                </button>
+                <button 
+                    className={`view-toggle ${viewMode === 'list' ? 'active' : ''}`}
+                    onClick={() => setViewMode('list')}
+                >
+                    List View
+                </button>
             </div>
-            <img src={`${process.env.PUBLIC_URL}/Logo.png`} alt="Logo" className="logo" />
-            <h1>Lawsist View</h1>
-            <div className="complaint-container">
-                {sortedComplaints.map((complaint, index) => (
-                    <ComplaintCard key={index} complaint={complaint} index={index} />
+
+            <div className="search-container">
+                <div className="search-wrapper">
+                    <input
+                        type="text"
+                        placeholder="Search cases..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="search-input"
+                    />
+                </div>
+                <div className="filter-wrapper">
+                    <select 
+                        value={sortBy} 
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="sort-select"
+                    >
+                        <option value="date">Recent First</option>
+                        <option value="title">Case Name</option>
+                        <option value="status">Status</option>
+                    </select>
+                </div>
+            </div>
+
+            <div className={`complaint-container ${viewMode}`}>
+                {filteredComplaints.map((complaint, index) => (
+                    <ComplaintCard 
+                        key={index} 
+                        complaint={complaint} 
+                        index={index}
+                        viewMode={viewMode}
+                    />
                 ))}
             </div>
         </div>
     );
 }
 
-function ComplaintCard({ complaint, index }) {
+function ComplaintCard({ complaint, index, viewMode }) {
     const navigate = useNavigate();
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-            navigate(`/complaint/${index}`);
-        }
+    const dueDate = new Date('2024-11-16');
+    const today = new Date();
+    const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    
+    const getStatusClass = () => {
+        if (daysUntilDue < 0) return 'status-overdue';
+        if (daysUntilDue < 7) return 'status-urgent';
+        return 'status-normal';
     };
 
     return (
         <div 
-            className="complaint-card" 
-            tabIndex={0}
-            onKeyPress={handleKeyPress}
-            role="button"
-            aria-label={`View details for complaint ${index + 1}`}
+            className={`complaint-card ${viewMode} ${getStatusClass()}`}
+            onClick={() => navigate(`/complaint/${index}`)}
         >
-            <Link to={`/complaint/${index}`} className="complaint-title">
-                <h2>Complaint {index + 1}</h2>
-                <h3>{complaint.title}</h3>
-            </Link>
-            {/* Rest of your complaint card content */}
+            <div className="card-header">
+                <div className="case-number">Case #{index + 1}</div>
+                <div className={`status-badge ${getStatusClass()}`}>
+                    {daysUntilDue < 0 ? 'Overdue' : 
+                     daysUntilDue < 7 ? 'Urgent' : 'Active'}
+                </div>
+            </div>
+
+            <div className="card-content">
+                <h3 className="case-title">{complaint.title}</h3>
+                
+                <div className="case-meta">
+                    <div className="meta-item">
+                        <span className="meta-label">Next Action:</span>
+                        <span className="meta-value">{complaint.nextRequestDate}</span>
+                    </div>
+                    <div className="meta-item">
+                        <span className="meta-label">Contact:</span>
+                        <span className="meta-value">{complaint.spokeTo}</span>
+                    </div>
+                </div>
+
+                <div className="quick-actions">
+                    <button className="action-button" onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(complaint.links.complaint, '_blank');
+                    }}>
+                        View Docs
+                    </button>
+                    <button className="action-button secondary" onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/complaint/${index}`);
+                    }}>
+                        Details
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
