@@ -53,6 +53,7 @@ h1 {
 .complaint-card ul {
   list-style: none;
   padding: 0;
+  margin-bottom: 15px;
 }
 
 .complaint-card ul li {
@@ -66,4 +67,14 @@ h1 {
 
 .complaint-card ul li a:hover {
   text-decoration: underline;
+}
+
+.details {
+  margin-top: 10px;
+  text-align: left;
+}
+
+.details p {
+  margin: 5px 0;
+  color: #555;
 }
