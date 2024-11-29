@@ -3,6 +3,8 @@ import Papa from 'papaparse';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import './App.css';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || window.location.origin;
+
 function App() {
     const [complaints, setComplaints] = useState([]);
     const [error, setError] = useState(null);
@@ -169,26 +171,81 @@ function ComplaintGrid({ complaints }) {
 
 function ComplaintCard({ complaint, index, viewMode }) {
     const navigate = useNavigate();
-    const dueDate = new Date('2024-11-16');
-    const today = new Date();
-    const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
-    
-    const getStatusClass = () => {
-        if (daysUntilDue < 0) return 'status-overdue';
-        if (daysUntilDue < 7) return 'status-urgent';
-        return 'status-normal';
+    const [status, setStatus] = useState(complaint.status || 'pending_review');
+    const [statusNote, setStatusNote] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    // Load initial status
+    useEffect(() => {
+        fetchStatus();
+    }, []);
+
+    const fetchStatus = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/status/${index}`);
+            const data = await response.json();
+            if (data) {
+                setStatus(data.status);
+                setStatusNote(data.note || '');
+            }
+        } catch (error) {
+            console.error('Failed to fetch status:', error);
+        }
+    };
+
+    const handleStatusChange = async (newStatus) => {
+        if (isUpdating) return;
+        
+        let note = '';
+        if (newStatus === 'rejected' || newStatus === 'pending_changes') {
+            note = prompt(newStatus === 'rejected' ? 
+                'Please provide rejection reason:' : 
+                'Please specify required changes:');
+            
+            if (!note) return; // Cancel if no note provided
+        }
+
+        setIsUpdating(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/updateStatus`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    complaintId: index,
+                    status: newStatus,
+                    note: note,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update status');
+            }
+
+            setStatus(newStatus);
+            setStatusNote(note);
+        } catch (error) {
+            console.error('Failed to update status:', error);
+            alert('Failed to update status. Please try again.');
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     return (
         <div 
-            className={`complaint-card ${viewMode} ${getStatusClass()}`}
+            className={`complaint-card ${viewMode} ${status}`}
             onClick={() => navigate(`/complaint/${index}`)}
         >
             <div className="card-header">
                 <div className="case-number">Case #{index + 1}</div>
-                <div className={`status-badge ${getStatusClass()}`}>
-                    {daysUntilDue < 0 ? 'Overdue' : 
-                     daysUntilDue < 7 ? 'Urgent' : 'Active'}
+                <div className={`status-badge ${status}`}>
+                    {status === 'pending_review' ? 'Pending Review' : 
+                     status === 'rejected' ? 'Rejected' : 
+                     status === 'accepted' ? 'Accepted' : 'Active'}
                 </div>
             </div>
 
@@ -205,6 +262,44 @@ function ComplaintCard({ complaint, index, viewMode }) {
                         <span className="meta-value">{complaint.spokeTo}</span>
                     </div>
                 </div>
+
+                <div className="status-controls">
+                    <button 
+                        className={`status-button ${status === 'pending_review' ? 'active' : ''}`}
+                        onClick={() => handleStatusChange('pending_review')}
+                        disabled={isUpdating}
+                    >
+                        Pending Review
+                    </button>
+                    <button 
+                        className={`status-button ${status === 'rejected' ? 'active' : ''}`}
+                        onClick={() => handleStatusChange('rejected')}
+                        disabled={isUpdating}
+                    >
+                        Reject
+                    </button>
+                    <button 
+                        className={`status-button ${status === 'accepted' ? 'active' : ''}`}
+                        onClick={() => handleStatusChange('accepted')}
+                        disabled={isUpdating}
+                    >
+                        Accept (Send to Golda)
+                    </button>
+                    <button 
+                        className={`status-button ${status === 'pending_changes' ? 'active' : ''}`}
+                        onClick={() => handleStatusChange('pending_changes')}
+                        disabled={isUpdating}
+                    >
+                        Request Changes
+                    </button>
+                </div>
+                
+                {statusNote && (
+                    <div className="status-note">
+                        <strong>{status === 'rejected' ? 'Rejection Reason:' : 'Requested Changes:'}</strong>
+                        <p>{statusNote}</p>
+                    </div>
+                )}
 
                 <div className="quick-actions">
                     <button className="action-button" onClick={(e) => {
